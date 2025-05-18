@@ -3,10 +3,22 @@ import LogoBlock from "./LogoBlock";
 
 export default function Header({ selectedCategory, setSelectedCategory }) {
   const navigate = useNavigate();
-  const allCategories = [
-    "전체", "연애", "가정", "학업", "직장",
-    "교우", "건강", "메뉴", "당근", "TMI"
-  ];
+
+  // 한글 카테고리 → 영어 아이콘 파일명 매핑
+  const categoryIcons = {
+    전체: "all",
+    연애: "love",
+    가정: "family",
+    학업: "study",
+    직장: "work",
+    교우: "friends",
+    건강: "health",
+    메뉴: "menu",
+    당근: "carrot",
+    TMI: "tmi",
+  };
+
+  const allCategories = Object.keys(categoryIcons);
 
   return (
     <div className="bg-[#0b0c2a] text-white border-b border-gray-700">
@@ -38,7 +50,11 @@ export default function Header({ selectedCategory, setSelectedCategory }) {
                 : "bg-blue-300 text-black hover:bg-blue-400"
             }`}
           >
-            <img src={`/icons/${cat}.png`} alt={cat} className="w-5 h-5" />
+            <img
+              src={`/icons/${categoryIcons[cat]}.png`}
+              alt={cat}
+              className="w-5 h-5"
+            />
             {cat}
           </button>
         ))}

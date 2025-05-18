@@ -15,17 +15,24 @@ export default function NewPostPage({ setPosts }) {
       return;
     }
 
-    const newPost = {
-      id: Date.now(),
-      category,
-      author: "익명", // 또는 현재 로그인 사용자 닉네임
-      content,
-      likes: 0,
-      comments: [],
-    };
-
-    setPosts((prevPosts) => [...prevPosts, newPost]);
-    navigate("/"); // 글 작성 후 홈으로 이동
+    fetch("http://localhost:8080/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category,
+        content,
+        author: "익명", // 나중에 currentUser.nickname으로 대체 가능
+      }),
+    })
+      .then((res) => res.json())
+      .then((newPost) => {
+        setPosts((prev) => [...prev, newPost]);
+        navigate("/");
+      })
+      .catch((err) => {
+        console.error("등록 실패:", err);
+        alert("등록 중 오류가 발생했습니다.");
+      });
   };
 
   return (

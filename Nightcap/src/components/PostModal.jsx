@@ -6,14 +6,32 @@ export default function PostModal({ onClose, onSubmit }) {
   const [content, setContent] = useState("");
 
   const handleSubmit = () => {
-    if (!content.trim()) {
-      alert("고민을 작성해주세요.");
-      return;
-    }
-    onSubmit({ category, content });
-    onClose();
-    // 효과음 재생 등 추가 가능
-  };
+  if (!content.trim()) {
+    alert("고민을 작성해주세요.");
+    return;
+  }
+
+  // 백엔드로 POST 요청 보내기
+  fetch("http://localhost:8080/posts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      category,
+      content,
+      author: "익명",  // 또는 currentUser.nickname
+    }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      onSubmit(data);  // HomePage의 상태에 반영
+      onClose();
+    })
+    .catch((err) => {
+      console.error("등록 실패:", err);
+      alert("서버 오류로 등록에 실패했습니다.");
+    });
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
