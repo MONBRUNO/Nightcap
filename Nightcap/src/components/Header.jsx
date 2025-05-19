@@ -1,10 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import LogoBlock from "./LogoBlock";
 
-export default function Header({ selectedCategory, setSelectedCategory }) {
+export default function Header({
+  selectedCategory,
+  setSelectedCategory,
+  currentUser,
+}) {
   const navigate = useNavigate();
 
-  // 한글 카테고리 → 영어 아이콘 파일명 매핑
   const categoryIcons = {
     전체: "all",
     연애: "love",
@@ -18,21 +21,48 @@ export default function Header({ selectedCategory, setSelectedCategory }) {
     TMI: "tmi",
   };
 
+  const aliasIcons = {
+    밤손님: "/icons/night.png",
+    마스터: "/icons/wizard.png",
+    요정: "/icons/fairy.png",
+    바텐더: "/icons/bartender.png",
+    해결사: "/icons/detective.png",
+  };
+
+  const getAliasBase = (alias) => {
+    // 숫자 제외하고 앞부분만 추출 (예: 밤손님1 → 밤손님)
+    return alias?.match(/^[^\d]+/)[0];
+  };
+
   const allCategories = Object.keys(categoryIcons);
 
   return (
     <div className="bg-[#0b0c2a] text-white border-b border-gray-700">
-      {/* 로그인 버튼 우상단 + 중앙 로고 */}
+      {/* 로그인 상태 또는 로그인 버튼 */}
       <div className="relative pt-6 px-4">
-        {/* 오른쪽 상단 로그인 아이콘 */}
-        <button
-          onClick={() => navigate("/login")}
-          className="absolute right-10 top-10"
-        >
-          <img src="/icons/person.png" alt="로그인" className="w-6 h-6" />
-        </button>
+        <div className="absolute right-10 top-10 flex items-center gap-2">
+          {currentUser ? (
+            <>
+              <img
+                src={
+                  aliasIcons[getAliasBase(currentUser.alias)] ||
+                  "/icons/default.png"
+                }
+                alt="alias"
+                className="w-6 h-6"
+              />
+              <span className="text-sm text-blue-300 font-semibold">
+                {currentUser.alias}의 nightcap
+              </span>
+            </>
+          ) : (
+            <button onClick={() => navigate("/login")}>
+              <img src="/icons/person.png" alt="로그인" className="w-6 h-6" />
+            </button>
+          )}
+        </div>
 
-        {/* 중앙 로고를 가운데 정렬 */}
+        {/* 중앙 로고 */}
         <div className="flex justify-center">
           <LogoBlock />
         </div>

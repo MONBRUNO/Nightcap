@@ -7,6 +7,9 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [selectedTheme, setSelectedTheme] = useState("밤손님");
+
+  const themes = ["밤손님", "마스터", "요정", "해결사", "바텐더"];
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -19,19 +22,23 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:8080/auth/signup", {
+      const res = await fetch("http://localhost:8080/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, selectedTheme }),
       });
 
+      const msg = await res.text();
+
       if (res.ok) {
+        setSuccessMsg(msg);
         setSuccessMsg("회원가입이 완료되었습니다!");
         setUsername("");
         setPassword("");
         setConfirmPassword("");
       } else {
         const err = await res.text();
+        setErrorMsg(`회원가입 실패: ${msg}`);
         setErrorMsg(`회원가입 실패: ${err}`);
       }
     } catch (err) {
@@ -67,7 +74,9 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium">비밀번호 확인</label>
+            <label className="block mb-1 text-sm font-medium">
+              비밀번호 확인
+            </label>
             <input
               type="password"
               className="w-full p-2 rounded bg-white text-black"
@@ -76,6 +85,23 @@ export default function SignupPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">
+              테마 아이디 선택
+            </label>
+            <select
+              className="w-full p-2 rounded bg-white text-black"
+              value={selectedTheme}
+              onChange={(e) => setSelectedTheme(e.target.value)}
+            >
+              {themes.map((theme, i) => (
+                <option key={i} value={theme}>
+                  {theme}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="submit"
             className="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-2 rounded"
@@ -85,9 +111,14 @@ export default function SignupPage() {
         </form>
 
         {errorMsg && <p className="text-red-400 text-center">{errorMsg}</p>}
-        {successMsg && <p className="text-green-400 text-center">{successMsg}</p>}
+        {successMsg && (
+          <p className="text-green-400 text-center">{successMsg}</p>
+        )}
 
-        <button className="mt-4 w-full text-sm text-blue-300 hover:underline" onClick={() => window.location.href = "/login"}>
+        <button
+          className="mt-4 w-full text-sm text-blue-300 hover:underline"
+          onClick={() => (window.location.href = "/login")}
+        >
           로그인 페이지로 돌아가기
         </button>
       </div>

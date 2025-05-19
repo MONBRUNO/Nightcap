@@ -1,36 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
 import PostModal from "../components/PostModal";
 
 export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
   const navigate = useNavigate();
-
   const [selectedCategory, setSelectedCategory] = useState("전체");
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [commentReactions, setCommentReactions] = useState({});
   const [likedPosts, setLikedPosts] = useState({});
 
-  const filteredPosts =
-    selectedCategory === "전체"
-      ? posts
-      : posts.filter((post) => post.category === selectedCategory);
+  if (isLoggedIn && !currentUser) {
+    return <div className="text-red-400 p-4">로그인 정보가 없습니다.</div>;
+  }
 
-  // --- 함수들 모두 여기 포함해야 합니다. ---
+  const filteredPosts = Array.isArray(posts)
+    ? selectedCategory === "전체"
+      ? posts
+      : posts.filter((post) => post.category === selectedCategory)
+    : [];
 
   const handleAddPost = (newPost) => {
-    setPosts((prev) => [
-      ...prev,
-      {
-        ...newPost,
-        id: Date.now(),
-        likes: 0,
-        comments: [],
-        author: currentUser.nickname || "익명",
-        authorId: currentUser.id,
-      },
-    ]);
+    setPosts((prev) => [...prev, { ...newPost, comments: [], likes: 0 }]);
   };
 
   const handleAddComment = (postId, comment) => {
@@ -46,8 +36,9 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
                   text: comment,
                   likes: 0,
                   dislikes: 0,
-                  author: currentUser.nickname || "익명",
-                  authorId: currentUser.id,
+                  author: currentUser?.alias || "익명",
+                  authorId: currentUser?.id || null,
+                  profileIcon: getAliasIcon(currentUser?.alias),
                 },
               ],
             }
@@ -65,17 +56,13 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
           : p
       )
     );
-    setLikedPosts((prev) => ({
-      ...prev,
-      [postId]: !alreadyLiked,
-    }));
+    setLikedPosts((prev) => ({ ...prev, [postId]: !alreadyLiked }));
   };
 
   const handleCommentReaction = (postId, commentId, type) => {
     const currentReaction = commentReactions[commentId];
-
-    setPosts((prevPosts) =>
-      prevPosts.map((post) => {
+    setPosts((prev) =>
+      prev.map((post) => {
         if (post.id !== postId) return post;
         return {
           ...post,
@@ -83,13 +70,11 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
             if (c.id !== commentId) return c;
             let updatedLikes = c.likes || 0;
             let updatedDislikes = c.dislikes || 0;
-
             if (currentReaction === type) {
               if (type === "like") updatedLikes--;
               if (type === "dislike") updatedDislikes--;
               return { ...c, likes: updatedLikes, dislikes: updatedDislikes };
             }
-
             if (currentReaction === "like" && type === "dislike") {
               updatedLikes--;
               updatedDislikes++;
@@ -100,13 +85,11 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
               if (type === "like") updatedLikes++;
               else updatedDislikes++;
             }
-
             return { ...c, likes: updatedLikes, dislikes: updatedDislikes };
           }),
         };
       })
     );
-
     setCommentReactions((prev) => {
       if (currentReaction === type) {
         const updated = { ...prev };
@@ -143,27 +126,30 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
-          ? {
-              ...p,
-              comments: p.comments.filter((c) => c.id !== commentId),
-            }
+          ? { ...p, comments: p.comments.filter((c) => c.id !== commentId) }
           : p
       )
     );
   };
 
-  // 현재 사용자가 댓글 작성자인지 확인하는 함수
   const isCommentAuthor = (comment) => {
-    return isLoggedIn && comment.authorId === currentUser.id;
+    return isLoggedIn && currentUser && comment.authorId === currentUser.id;
+  };
+
+  const getAliasIcon = (alias = "") => {
+    const base = alias.match(/^[^\d]+/)?.[0] || "";
+    const icons = {
+      밤손님: "/icons/night.png",
+      마스터: "/icons/wizard.png",
+      요정: "/icons/fairy.png",
+      바텐더: "/icons/bartender.png",
+      해결사: "/icons/detective.png",
+    };
+    return icons[base] || "/icons/default.png";
   };
 
   return (
     <div className="bg-[#0b0c2a] min-h-screen text-white">
-      <Header
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-      />
-
       <button
         onClick={() => {
           if (!isLoggedIn) {
@@ -190,18 +176,27 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
               className="bg-[#1a1b3a] p-4 rounded-xl shadow-md cursor-pointer"
               onClick={() => navigate(`/posts/${post.id}`)}
             >
-              <div className="text-sm text-gray-400">
-                {post.category} · {post.author}
+              <div className="flex justify-between items-center text-sm text-gray-400">
+                <span>{post.category}</span>
+                <div className="flex items-center gap-1">
+                  <img
+                    src={post.profileIcon || "/icons/default.png"}
+                    className="w-5 h-5"
+                    alt="icon"
+                  />
+                  <span>{post.author}</span>
+                </div>
               </div>
+
               <div className="text-lg my-2">{post.content}</div>
 
               <div className="flex gap-4 text-sm items-center">
                 <button
-                  className={`${
+                  className={
                     likedPosts[post.id]
                       ? "text-pink-400"
                       : "text-blue-300 hover:text-blue-400"
-                  }`}
+                  }
                   onClick={(e) => {
                     e.stopPropagation();
                     handleTogglePostLike(post.id);
@@ -216,16 +211,21 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
                 {post.comments.slice(0, 2).map((c) => (
                   <div
                     key={c.id}
-                    className="text-sm text-gray-200 flex justify-between items-center"
+                    className="text-sm text-gray-200 flex justify-between items-start"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div>
-                      <span>
-                        <b>{c.author}</b>: {c.text}
+                    <div className="flex gap-1 items-center">
+                      <img
+                        src={c.profileIcon || "/icons/default.png"}
+                        className="w-4 h-4"
+                        alt="icon"
+                      />
+                      <span className="font-bold text-blue-300">
+                        {c.author}
                       </span>
-
+                      <span>: {c.text}</span>
                       {isCommentAuthor(c) && (
-                        <div className="flex justify-start space-x-3 mt-1 text-xs text-gray-400">
+                        <div className="flex gap-2 text-xs text-gray-400 ml-2">
                           <button
                             onClick={() => handleEditComment(post.id, c.id)}
                             className="hover:text-yellow-300"
@@ -241,17 +241,16 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
                         </div>
                       )}
                     </div>
-
                     <div className="flex gap-2 ml-2 text-xs">
                       <button
                         onClick={() =>
                           handleCommentReaction(post.id, c.id, "like")
                         }
-                        className={`${
+                        className={
                           commentReactions[c.id] === "like"
                             ? "text-blue-400"
                             : "text-blue-300 hover:text-blue-400"
-                        }`}
+                        }
                       >
                         👍 {c.likes || 0}
                       </button>
@@ -259,11 +258,11 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
                         onClick={() =>
                           handleCommentReaction(post.id, c.id, "dislike")
                         }
-                        className={`${
+                        className={
                           commentReactions[c.id] === "dislike"
                             ? "text-red-400"
                             : "text-red-300 hover:text-red-400"
-                        }`}
+                        }
                       >
                         👎 {c.dislikes || 0}
                       </button>
@@ -306,7 +305,7 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
                 </form>
               ) : (
                 <div className="mt-2 text-sm text-gray-400">
-                  💬 댓글을 작성하려면{" "}
+                  💬 댓글을 작성하려면 {" "}
                   <a href="/login" className="underline text-blue-300">
                     로그인
                   </a>{" "}
@@ -319,7 +318,11 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
       </div>
 
       {isModalOpen && (
-        <PostModal onClose={() => setIsModalOpen(false)} onSubmit={handleAddPost} />
+        <PostModal
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleAddPost}
+          currentUser={currentUser}
+        />
       )}
     </div>
   );

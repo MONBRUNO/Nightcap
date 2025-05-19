@@ -1,37 +1,69 @@
 import { useState } from "react";
 
-export default function PostModal({ onClose, onSubmit }) {
-  const categories = ["연애", "가정", "학업", "직장", "교우", "건강", "메뉴", "당근", "TMI"];
+export default function PostModal({ onClose, onSubmit, currentUser }) {
+  const categories = [
+    "연애",
+    "가정",
+    "학업",
+    "직장",
+    "교우",
+    "건강",
+    "메뉴",
+    "당근",
+    "TMI",
+  ];
   const [category, setCategory] = useState("연애");
   const [content, setContent] = useState("");
 
-  const handleSubmit = () => {
-  if (!content.trim()) {
-    alert("고민을 작성해주세요.");
-    return;
-  }
+  // 테마 아이디 → 아이콘 경로
+  const getAliasIcon = (alias = "") => {
+    const base = alias.match(/^[^\d]+/)?.[0] || "";
+    const icons = {
+      밤손님: "/icons/night.png",
+      마스터: "/icons/wizard.png",
+      요정: "/icons/fairy.png",
+      바텐더: "/icons/bartender.png",
+      해결사: "/icons/detective.png",
+    };
+    return icons[base] || "/icons/default.png";
+  };
 
-  // 백엔드로 POST 요청 보내기
-  fetch("http://localhost:8080/posts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const handleSubmit = () => {
+    if (!content.trim()) {
+      alert("고민을 작성해주세요.");
+      return;
+    }
+
+    const postData = {
       category,
       content,
-      author: "익명",  // 또는 currentUser.nickname
-    }),
-  })
-    .then(res => res.json())
-    .then(data => {
-      onSubmit(data);  // HomePage의 상태에 반영
-      onClose();
-    })
-    .catch((err) => {
-      console.error("등록 실패:", err);
-      alert("서버 오류로 등록에 실패했습니다.");
-    });
-};
+      author: currentUser?.alias || "익명",
+      authorId: currentUser?.id || null,
+      profileIcon: getAliasIcon(currentUser?.alias),
+    };
 
+    // ✅ 여기서 콘솔로 확인
+    console.log("📦 보낼 postData:", postData);
+
+    fetch("http://localhost:8080/posts", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(postData),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("서버 응답 실패");
+        return res.json();
+      })
+      .then((data) => {
+        onSubmit(data);
+        onClose();
+      })
+      .catch((err) => {
+        console.error("등록 실패:", err);
+        alert("서버 오류로 등록에 실패했습니다.");
+      });
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
@@ -45,7 +77,9 @@ export default function PostModal({ onClose, onSubmit }) {
           className="w-full p-2 mb-4 rounded bg-[#2a2b4a] text-white"
         >
           {categories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
           ))}
         </select>
 

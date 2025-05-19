@@ -1,46 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LogoBlock from "../components/LogoBlock";
 import { useNavigate } from "react-router-dom";
 
-export default function LoginPage({ setIsLoggedIn, setAuthToken }) {
+export default function LoginPage({
+  setIsLoggedIn,
+  setUserId,
+  setCurrentUser,
+}) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [saveId, setSaveId] = useState(false);
   const navigate = useNavigate();
+  const [loginSuccessMsg, setLoginSuccessMsg] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg("");
 
     try {
-      const res = await fetch("http://localhost:8080/auth/login", {
+      const res = await fetch("http://localhost:8080/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setAuthToken(data.token);
-        setIsLoggedIn(true);
-        setErrorMsg("");
-
-        if (saveId) {
-          localStorage.setItem("savedUsername", username);
-        } else {
-          localStorage.removeItem("savedUsername");
-        }
-      } else {
+      if (!res.ok) {
         setErrorMsg("아이디 또는 비밀번호가 틀렸습니다.");
+        return;
       }
+
+      const user = await res.json();
+      setCurrentUser(user); // alias 포함된 전체 유저 객체
+
+      setIsLoggedIn(true);
+      setUserId(user.id);
+      setCurrentUser(user);
+
+      setLoginSuccessMsg("로그인 완료!");
+      setTimeout(() => {
+        setLoginSuccessMsg("");
+        navigate("/");
+      }, 2000);
     } catch (error) {
       setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
     }
   };
 
-  // 컴포넌트 마운트 시 저장된 아이디 불러오기
-  useState(() => {
+  useEffect(() => {
     const saved = localStorage.getItem("savedUsername");
     if (saved) {
       setUsername(saved);
@@ -50,7 +57,12 @@ export default function LoginPage({ setIsLoggedIn, setAuthToken }) {
 
   return (
     <div className="min-h-screen bg-[#0b0c2a] text-white flex flex-col items-center justify-center px-4">
-      <LogoBlock /> {/* 중앙 로고 */}
+      {loginSuccessMsg && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50 transition">
+          {loginSuccessMsg}
+        </div>
+      )}
+      <LogoBlock />
       <div className="bg-[#1a1b3a] p-6 rounded-xl w-full max-w-sm space-y-4 shadow-lg">
         <h2 className="text-xl font-semibold text-center">로그인</h2>
         <form className="space-y-4" onSubmit={handleLogin}>

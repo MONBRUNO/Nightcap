@@ -4,47 +4,32 @@ import { useParams, useNavigate } from "react-router-dom";
 export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUser }) {
   const { postId } = useParams();
   const navigate = useNavigate();
-  
-  // 문자열을 숫자로 변환 - parseInt는 숫자가 아닌 문자가 포함된 경우에도 앞 부분만 파싱하므로 조심
   const postIdNum = parseInt(postId, 10);
-  
-  // 디버깅을 위한 콘솔 로그
-  console.log("Parameter postId:", postId);
-  console.log("Converted postIdNum:", postIdNum);
-  console.log("Available post IDs:", posts.map(p => p.id));
-  
-  const post = posts.find((p) => p.id === postIdNum);
-  console.log("Found post:", post);
 
-  // 댓글 좋아요/싫어요 상태 추적용
+  const post = posts.find((p) => p.id === postIdNum);
+
   const [commentReactions, setCommentReactions] = useState({});
 
   useEffect(() => {
-    // 포스트를 찾을 수 없는 경우 처리
     if (!post && posts.length > 0) {
       alert("해당 포스트를 찾을 수 없습니다.");
       navigate("/");
     }
   }, [post, navigate, posts]);
 
-  // 현재 사용자가 댓글 작성자인지 확인하는 함수
   const isCommentAuthor = (comment) => {
-    return isLoggedIn && comment.authorId === currentUser.id;
+    return isLoggedIn && comment.authorId === currentUser?.id;
   };
 
-  // 댓글 좋아요/싫어요 토글 함수
   const handleCommentReaction = (commentId, type) => {
     const currentReaction = commentReactions[commentId];
-
     setPosts((prevPosts) =>
       prevPosts.map((p) => {
         if (p.id !== postIdNum) return p;
-
         return {
           ...p,
           comments: p.comments.map((c) => {
             if (c.id !== commentId) return c;
-
             let updatedLikes = c.likes || 0;
             let updatedDislikes = c.dislikes || 0;
 
@@ -82,7 +67,6 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
     });
   };
 
-  // 댓글 수정
   const handleEditComment = (commentId) => {
     const comment = post.comments.find((c) => c.id === commentId);
     const newText = prompt("댓글을 수정하세요", comment.text);
@@ -102,7 +86,6 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
     }
   };
 
-  // 댓글 삭제
   const handleDeleteComment = (commentId) => {
     if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
     setPosts((prev) =>
@@ -117,11 +100,22 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
     );
   };
 
-  // 댓글 추가
+  const getAliasIcon = (alias = "") => {
+    const base = alias.match(/^[^\d]+/)?.[0] || "";
+    const icons = {
+      밤손님: "/icons/night.png",
+      마스터: "/icons/wizard.png",
+      요정: "/icons/fairy.png",
+      바텐더: "/icons/bartender.png",
+      해결사: "/icons/detective.png",
+    };
+    return icons[base] || "/icons/default.png";
+  };
+
   const handleAddComment = (e) => {
     e.preventDefault();
     const commentText = e.target.comment.value.trim();
-    if (!commentText) return;
+    if (!commentText || !currentUser) return;
 
     setPosts((prev) =>
       prev.map((p) =>
@@ -135,8 +129,9 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
                   text: commentText,
                   likes: 0,
                   dislikes: 0,
-                  author: currentUser.nickname || "익명",
+                  author: currentUser.alias,
                   authorId: currentUser.id,
+                  profileIcon: getAliasIcon(currentUser.alias),
                 },
               ],
             }
@@ -146,19 +141,13 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
     e.target.reset();
   };
 
-  // 포스트 데이터가 로딩 중이거나 아직 없는 경우
   if (posts.length === 0) {
-    return (
-      <div className="bg-[#0b0c2a] min-h-screen text-white px-6 py-4">
-        <p className="text-blue-400">데이터 로딩 중...</p>
-      </div>
-    );
+    return <div className="bg-[#0b0c2a] text-white px-6 py-4">데이터 로딩 중...</div>;
   }
 
-  // 포스트를 찾을 수 없는 경우
   if (!post) {
     return (
-      <div className="bg-[#0b0c2a] min-h-screen text-white px-6 py-4">
+      <div className="bg-[#0b0c2a] text-white px-6 py-4">
         <p className="text-red-400">해당 포스트를 찾을 수 없습니다.</p>
         <button onClick={() => navigate(-1)} className="underline text-blue-400 mt-2">
           ← 돌아가기
@@ -177,9 +166,14 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
       </button>
 
       <div className="bg-[#1a1b3a] rounded-xl p-6 shadow-md">
-        <div className="text-sm text-gray-400 mb-1">
-          {post.category} · {post.author}
+        <div className="flex justify-between items-center text-sm text-gray-400 mb-1">
+          <span>{post.category}</span>
+          <div className="flex items-center gap-1">
+            <img src={post.profileIcon || "/icons/default.png"} className="w-5 h-5" alt="icon" />
+            <span>{post.author}</span>
+          </div>
         </div>
+
         <div className="text-xl mb-3">{post.content}</div>
         <div className="flex gap-4 text-sm items-center mb-4">
           <span>💖 {post.likes}</span>
@@ -196,15 +190,11 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
 
         <div className="space-y-4">
           {post.comments.map((c) => (
-            <div
-              key={c.id}
-              className="bg-[#2a2b4a] rounded-md p-3 flex justify-between items-start"
-            >
+            <div key={c.id} className="bg-[#2a2b4a] rounded-md p-3 flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center mb-1">
-                  <span className="font-bold text-sm text-blue-300 mr-2">
-                    {c.author}
-                  </span>
+                  <img src={c.profileIcon || "/icons/default.png"} className="w-4 h-4 mr-1" alt="icon" />
+                  <span className="font-bold text-sm text-blue-300 mr-2">{c.author}</span>
                   <span className="text-xs text-gray-400">
                     {new Date(c.id).toLocaleString().split(",")[0]}
                   </span>
@@ -229,11 +219,10 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
                   )}
                 </div>
               </div>
-
               <div className="flex flex-col items-center text-xs space-y-1 ml-4">
                 <button
                   onClick={() => handleCommentReaction(c.id, "like")}
-                  className={`${
+                  className={`$ {
                     commentReactions[c.id] === "like"
                       ? "text-blue-400"
                       : "text-blue-300 hover:text-blue-400"
@@ -243,7 +232,7 @@ export default function PostDetailPage({ posts, setPosts, isLoggedIn, currentUse
                 </button>
                 <button
                   onClick={() => handleCommentReaction(c.id, "dislike")}
-                  className={`${
+                  className={`$ {
                     commentReactions[c.id] === "dislike"
                       ? "text-red-400"
                       : "text-red-300 hover:text-red-400"
