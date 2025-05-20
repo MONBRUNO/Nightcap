@@ -34,15 +34,17 @@ export default function PostModal({ onClose, onSubmit, currentUser }) {
       return;
     }
 
+    const authorAlias = currentUser?.alias || "익명";
+
     const postData = {
       category,
       content,
-      author: currentUser?.alias || "익명",
-      authorId: currentUser?.id || null,
+      authorAlias: currentUser?.alias || "익명",
+      userId: currentUser?.id || null,
+      title: content.slice(0, 15), // ← 요거 추가!
       profileIcon: getAliasIcon(currentUser?.alias),
     };
 
-    // ✅ 여기서 콘솔로 확인
     console.log("📦 보낼 postData:", postData);
 
     fetch("http://localhost:8080/posts", {
@@ -53,10 +55,12 @@ export default function PostModal({ onClose, onSubmit, currentUser }) {
     })
       .then((res) => {
         if (!res.ok) throw new Error("서버 응답 실패");
-        return res.json();
+        return res.text(); // 문자열 응답일 경우
       })
       .then((data) => {
-        onSubmit(data);
+        console.log("등록 성공:", data);
+        onSubmit(postData); // ← 등록된 글 데이터를 넘김
+
         onClose();
       })
       .catch((err) => {

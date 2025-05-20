@@ -30,6 +30,12 @@ export default function LoginPage({
         return;
       }
 
+      if (saveId) {
+        localStorage.setItem("savedUsername", username);
+      } else {
+        localStorage.removeItem("savedUsername");
+      }
+
       const user = await res.json();
       setCurrentUser(user); // alias 포함된 전체 유저 객체
 
@@ -42,6 +48,8 @@ export default function LoginPage({
         setLoginSuccessMsg("");
         navigate("/");
       }, 2000);
+      // 로그인 성공 후
+      localStorage.setItem("user", JSON.stringify(user));
     } catch (error) {
       setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
     }

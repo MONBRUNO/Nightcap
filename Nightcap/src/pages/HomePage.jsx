@@ -2,12 +2,48 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PostModal from "../components/PostModal";
 
-export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
+export default function HomePage({
+  posts,
+  setPosts,
+  isLoggedIn,
+  currentUser,
+  selectedCategory,
+}) {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState("전체");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [commentReactions, setCommentReactions] = useState({});
   const [likedPosts, setLikedPosts] = useState({});
+
+  const categoryIcons = {
+    연애: "love",
+    가정: "family",
+    학업: "study",
+    직장: "work",
+    교우: "friends",
+    건강: "health",
+    메뉴: "menu",
+    당근: "carrot",
+    TMI: "tmi",
+  };
+
+  useEffect(() => {
+    const fetchCommentsForAllPosts = async () => {
+      const updatedPosts = await Promise.all(
+        posts.map(async (post) => {
+          const res = await fetch(
+            `http://localhost:8080/posts/${post.id}/comments`
+          );
+          const comments = await res.json();
+          return { ...post, comments: Array.isArray(comments) ? comments : [] };
+        })
+      );
+      setPosts(updatedPosts);
+    };
+
+    if (posts.length > 0) {
+      fetchCommentsForAllPosts();
+    }
+  }, []);
 
   if (isLoggedIn && !currentUser) {
     return <div className="text-red-400 p-4">로그인 정보가 없습니다.</div>;
@@ -19,44 +55,109 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
       : posts.filter((post) => post.category === selectedCategory)
     : [];
 
-  const handleAddPost = (newPost) => {
-    setPosts((prev) => [...prev, { ...newPost, comments: [], likes: 0 }]);
+  const getAliasIcon = (alias = "") => {
+    const base = alias.match(/^[^\d]+/)?.[0] || "";
+    const icons = {
+      밤손님: "/icons/night.png",
+      마스터: "/icons/wizard.png",
+      요정: "/icons/fairy.png",
+      바텐더: "/icons/bartender.png",
+      해결사: "/icons/detective.png",
+    };
+    return icons[base] || "/icons/default.png";
   };
 
-  const handleAddComment = (postId, comment) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? {
-              ...p,
-              comments: [
-                ...p.comments,
-                {
-                  id: Date.now(),
-                  text: comment,
-                  likes: 0,
-                  dislikes: 0,
-                  author: currentUser?.alias || "익명",
-                  authorId: currentUser?.id || null,
-                  profileIcon: getAliasIcon(currentUser?.alias),
-                },
-              ],
-            }
-          : p
-      )
-    );
+  const handleAddPost = async (newPost) => {
+    try {
+      const res = await fetch("http://localhost:8080/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPost),
+      });
+
+      if (!res.ok) throw new Error("글 등록 실패");
+
+      const savedPost = await res.json();
+      savedPost.likes = 0;
+      savedPost.comments = [];
+
+      setPosts((prev) => [...prev, savedPost]);
+    } catch (err) {
+      console.error("글 등록 실패:", err);
+      alert("글 등록 중 오류가 발생했습니다.");
+    }
   };
 
-  const handleTogglePostLike = (postId) => {
+  const handleAddComment = async (postId, commentText) => {
+    if (!commentText || !commentText.trim()) {
+      alert("댓글을 입력해주세요.");
+      return;
+    }
+
+    const newCommentData = {
+      content: commentText.trim(),
+      authorAlias: currentUser?.alias || "익명",
+      userId: currentUser?.id || null,
+      profileIcon: getAliasIcon(currentUser?.alias),
+    };
+
+    try {
+      const res = await fetch(
+        `http://localhost:8080/posts/${postId}/comments`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newCommentData),
+        }
+      );
+
+      if (!res.ok) throw new Error("서버 저장 실패");
+
+      const savedComment = await res.json();
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                comments: Array.isArray(p.comments)
+                  ? [...p.comments, savedComment]
+                  : [savedComment],
+              }
+            : p
+        )
+      );
+    } catch (error) {
+      console.error("댓글 등록 오류:", error);
+      alert("댓글 저장에 실패했습니다.");
+    }
+  };
+
+  const handleTogglePostLike = async (postId) => {
     const alreadyLiked = likedPosts[postId];
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, likes: alreadyLiked ? p.likes - 1 : p.likes + 1 }
-          : p
-      )
-    );
-    setLikedPosts((prev) => ({ ...prev, [postId]: !alreadyLiked }));
+    if (alreadyLiked) {
+      alert("이미 공감한 글입니다.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8080/posts/${postId}/like`, {
+        method: "PUT",
+      });
+
+      if (!res.ok) throw new Error("서버 에러");
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, likes: (p.likes || 0) + 1 } : p
+        )
+      );
+
+      setLikedPosts((prev) => ({ ...prev, [postId]: true }));
+    } catch (err) {
+      console.error("공감 실패:", err);
+      alert("공감 처리 중 오류가 발생했습니다.");
+    }
   };
 
   const handleCommentReaction = (postId, commentId, type) => {
@@ -66,30 +167,33 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
         if (post.id !== postId) return post;
         return {
           ...post,
-          comments: post.comments.map((c) => {
-            if (c.id !== commentId) return c;
-            let updatedLikes = c.likes || 0;
-            let updatedDislikes = c.dislikes || 0;
-            if (currentReaction === type) {
-              if (type === "like") updatedLikes--;
-              if (type === "dislike") updatedDislikes--;
-              return { ...c, likes: updatedLikes, dislikes: updatedDislikes };
-            }
-            if (currentReaction === "like" && type === "dislike") {
-              updatedLikes--;
-              updatedDislikes++;
-            } else if (currentReaction === "dislike" && type === "like") {
-              updatedDislikes--;
-              updatedLikes++;
-            } else if (!currentReaction) {
-              if (type === "like") updatedLikes++;
-              else updatedDislikes++;
-            }
-            return { ...c, likes: updatedLikes, dislikes: updatedDislikes };
-          }),
+          comments: Array.isArray(post.comments)
+            ? post.comments.map((c) => {
+                if (c.id !== commentId) return c;
+                let updatedLikes = c.likes || 0;
+                let updatedDislikes = c.dislikes || 0;
+                if (currentReaction === type) {
+                  if (type === "like") updatedLikes--;
+                  if (type === "dislike") updatedDislikes--;
+                } else {
+                  if (currentReaction === "like" && type === "dislike") {
+                    updatedLikes--;
+                    updatedDislikes++;
+                  } else if (currentReaction === "dislike" && type === "like") {
+                    updatedDislikes--;
+                    updatedLikes++;
+                  } else if (!currentReaction) {
+                    if (type === "like") updatedLikes++;
+                    else updatedDislikes++;
+                  }
+                }
+                return { ...c, likes: updatedLikes, dislikes: updatedDislikes };
+              })
+            : [],
         };
       })
     );
+
     setCommentReactions((prev) => {
       if (currentReaction === type) {
         const updated = { ...prev };
@@ -103,17 +207,21 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
 
   const handleEditComment = (postId, commentId) => {
     const post = posts.find((p) => p.id === postId);
-    const comment = post.comments.find((c) => c.id === commentId);
-    const newText = prompt("댓글을 수정하세요", comment.text);
+    const comment = Array.isArray(post.comments)
+      ? post.comments.find((c) => c.id === commentId)
+      : null;
+    const newText = prompt("댓글을 수정하세요", comment?.content);
     if (newText && newText.trim()) {
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
             ? {
                 ...p,
-                comments: p.comments.map((c) =>
-                  c.id === commentId ? { ...c, text: newText.trim() } : c
-                ),
+                comments: Array.isArray(p.comments)
+                  ? p.comments.map((c) =>
+                      c.id === commentId ? { ...c, content: newText.trim() } : c
+                    )
+                  : [],
               }
             : p
         )
@@ -126,27 +234,19 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
-          ? { ...p, comments: p.comments.filter((c) => c.id !== commentId) }
+          ? {
+              ...p,
+              comments: Array.isArray(p.comments)
+                ? p.comments.filter((c) => c.id !== commentId)
+                : [],
+            }
           : p
       )
     );
   };
 
-  const isCommentAuthor = (comment) => {
-    return isLoggedIn && currentUser && comment.authorId === currentUser.id;
-  };
-
-  const getAliasIcon = (alias = "") => {
-    const base = alias.match(/^[^\d]+/)?.[0] || "";
-    const icons = {
-      밤손님: "/icons/night.png",
-      마스터: "/icons/wizard.png",
-      요정: "/icons/fairy.png",
-      바텐더: "/icons/bartender.png",
-      해결사: "/icons/detective.png",
-    };
-    return icons[base] || "/icons/default.png";
-  };
+  const isCommentAuthor = (comment) =>
+    isLoggedIn && currentUser && comment.authorId === currentUser.id;
 
   return (
     <div className="bg-[#0b0c2a] min-h-screen text-white">
@@ -173,129 +273,154 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
           filteredPosts.map((post) => (
             <div
               key={post.id}
-              className="bg-[#1a1b3a] p-4 rounded-xl shadow-md cursor-pointer"
-              onClick={() => navigate(`/posts/${post.id}`)}
+              className="bg-[#1a1b3a] p-4 rounded-xl shadow-md"
             >
-              <div className="flex justify-between items-center text-sm text-gray-400">
-                <span>{post.category}</span>
-                <div className="flex items-center gap-1">
-                  <img
-                    src={post.profileIcon || "/icons/default.png"}
-                    className="w-5 h-5"
-                    alt="icon"
-                  />
-                  <span>{post.author}</span>
+              <div
+                className="cursor-pointer"
+                onClick={() => {
+                  if (!post.id) {
+                    console.error("❌ post.id가 없습니다:", post);
+                    return alert("잘못된 게시글입니다. 관리자에게 문의하세요.");
+                  }
+                  navigate(`/posts/${post.id}`);
+                }}
+              >
+                <div className="flex justify-between items-center text-sm text-gray-400">
+                  <div className="flex items-center gap-1 bg-blue-300 px-2 py-1 rounded-full text-sm text-black font-medium">
+                    <img
+                      src={`/icons/${
+                        categoryIcons[post.category] ?? "default"
+                      }.png`}
+                      className="w-4 h-4"
+                      alt="category"
+                    />
+                    <span>{post.category}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <img
+                      src={post.profileIcon || "/icons/default.png"}
+                      className="w-5 h-5"
+                      alt="icon"
+                    />
+                    <span>{post.author || post.authorAlias || "익명"}</span>
+                  </div>
+                </div>
+                <div className="text-base my-2">{post.content}</div>
+                <div className="flex gap-4 text-sm items-center">
+                  <button
+                    className={
+                      likedPosts[post.id]
+                        ? "text-pink-400"
+                        : "text-blue-300 hover:text-blue-400"
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTogglePostLike(post.id);
+                    }}
+                  >
+                    💖 {post.likes ?? 0}
+                  </button>
+                  <span>
+                    💬 {Array.isArray(post.comments) ? post.comments.length : 0}
+                  </span>
                 </div>
               </div>
 
-              <div className="text-lg my-2">{post.content}</div>
-
-              <div className="flex gap-4 text-sm items-center">
-                <button
-                  className={
-                    likedPosts[post.id]
-                      ? "text-pink-400"
-                      : "text-blue-300 hover:text-blue-400"
-                  }
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTogglePostLike(post.id);
-                  }}
-                >
-                  💖 {post.likes}
-                </button>
-                <span>💬 {post.comments.length}</span>
-              </div>
-
+              {/* 댓글 미리보기 */}
               <div className="mt-3 space-y-2">
-                {post.comments.slice(0, 2).map((c) => (
-                  <div
-                    key={c.id}
-                    className="text-sm text-gray-200 flex justify-between items-start"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex gap-1 items-center">
-                      <img
-                        src={c.profileIcon || "/icons/default.png"}
-                        className="w-4 h-4"
-                        alt="icon"
-                      />
-                      <span className="font-bold text-blue-300">
-                        {c.author}
-                      </span>
-                      <span>: {c.text}</span>
-                      {isCommentAuthor(c) && (
-                        <div className="flex gap-2 text-xs text-gray-400 ml-2">
+                {Array.isArray(post.comments) &&
+                  [...post.comments]
+                    .sort((a, b) =>
+                      (b.likes || 0) !== (a.likes || 0)
+                        ? (b.likes || 0) - (a.likes || 0)
+                        : new Date(a.createdAt) - new Date(b.createdAt)
+                    )
+                    .slice(0, 2)
+                    .map((c) => (
+                      <div
+                        key={c.id}
+                        className="text-sm text-gray-200 flex justify-between items-start"
+                      >
+                        <div className="flex gap-1 items-center">
+                          <img
+                            src={c.profileIcon || "/icons/default.png"}
+                            className="w-4 h-4"
+                            alt="icon"
+                          />
+                          <span className="font-bold text-blue-300">
+                            {c.author}
+                          </span>
+                          <span>: {c.content}</span>
+                          {isCommentAuthor(c) && (
+                            <div className="flex gap-2 text-xs text-gray-400 ml-2">
+                              <button
+                                onClick={() => handleEditComment(post.id, c.id)}
+                                className="hover:text-yellow-300"
+                              >
+                                수정
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteComment(post.id, c.id)
+                                }
+                                className="hover:text-red-300"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2 ml-2 text-xs">
                           <button
-                            onClick={() => handleEditComment(post.id, c.id)}
-                            className="hover:text-yellow-300"
+                            onClick={() =>
+                              handleCommentReaction(post.id, c.id, "like")
+                            }
+                            className={
+                              commentReactions[c.id] === "like"
+                                ? "text-blue-400"
+                                : "text-blue-300 hover:text-blue-400"
+                            }
                           >
-                            수정
+                            👍 {c.likes || 0}
                           </button>
                           <button
-                            onClick={() => handleDeleteComment(post.id, c.id)}
-                            className="hover:text-red-300"
+                            onClick={() =>
+                              handleCommentReaction(post.id, c.id, "dislike")
+                            }
+                            className={
+                              commentReactions[c.id] === "dislike"
+                                ? "text-red-400"
+                                : "text-red-300 hover:text-red-400"
+                            }
                           >
-                            삭제
+                            👎 {c.dislikes || 0}
                           </button>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 ml-2 text-xs">
-                      <button
-                        onClick={() =>
-                          handleCommentReaction(post.id, c.id, "like")
-                        }
-                        className={
-                          commentReactions[c.id] === "like"
-                            ? "text-blue-400"
-                            : "text-blue-300 hover:text-blue-400"
-                        }
-                      >
-                        👍 {c.likes || 0}
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleCommentReaction(post.id, c.id, "dislike")
-                        }
-                        className={
-                          commentReactions[c.id] === "dislike"
-                            ? "text-red-400"
-                            : "text-red-300 hover:text-red-400"
-                        }
-                      >
-                        👎 {c.dislikes || 0}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {post.comments.length > 2 && (
-                  <button
-                    className="text-sm text-blue-400 hover:underline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/posts/${post.id}`);
-                    }}
-                  >
-                    댓글 더보기...
-                  </button>
-                )}
+                      </div>
+                    ))}
               </div>
 
               {isLoggedIn ? (
                 <form
                   className="mt-2"
+                  onClick={(e) => e.stopPropagation()}
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const value = e.target.comment.value.trim();
-                    if (value) {
-                      handleAddComment(post.id, value);
-                      e.target.reset();
+                    e.stopPropagation();
+
+                    const value = e.target.elements.comment?.value.trim();
+                    const postId = e.target.elements.postId?.value;
+
+                    if (!value || !postId) {
+                      console.error("댓글 내용 또는 postId 누락");
+                      return;
                     }
+
+                    handleAddComment(Number(postId), value);
+                    e.target.reset();
                   }}
-                  onClick={(e) => e.stopPropagation()}
                 >
+                  <input type="hidden" name="postId" value={post.id} />
                   <input
                     name="comment"
                     maxLength={100}
@@ -305,7 +430,7 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
                 </form>
               ) : (
                 <div className="mt-2 text-sm text-gray-400">
-                  💬 댓글을 작성하려면 {" "}
+                  💬 댓글을 작성하려면{" "}
                   <a href="/login" className="underline text-blue-300">
                     로그인
                   </a>{" "}
@@ -320,7 +445,12 @@ export default function HomePage({ posts, setPosts, isLoggedIn, currentUser }) {
       {isModalOpen && (
         <PostModal
           onClose={() => setIsModalOpen(false)}
-          onSubmit={handleAddPost}
+          onSubmit={(newPost) =>
+            setPosts((prev) => [
+              ...prev,
+              { ...newPost, likes: 0, comments: [] },
+            ])
+          }
           currentUser={currentUser}
         />
       )}
