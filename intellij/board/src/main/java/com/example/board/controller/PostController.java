@@ -6,8 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.board.dto.PostDto;
 import java.time.LocalDateTime;
-
+import java.util.Optional;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/posts")
@@ -20,15 +21,28 @@ public class PostController {
         this.postRepository = postRepository;
     }
 
-    // 게시글 전체 조회
-    @GetMapping
-    public List<Post> getAllPosts() {
-        return postRepository.findAll();
+    @GetMapping("")
+    public List<PostDto> getAllPosts() {
+        List<Post> posts = postRepository.findAll();
+        return posts.stream()
+                .map(post -> {
+                    PostDto dto = new PostDto();
+                    dto.setId(post.getId());
+                    dto.setCategory(post.getCategory());
+                    dto.setContent(post.getContent());
+                    dto.setAuthorAlias(post.getAuthorAlias());
+                    dto.setUserId(post.getUserId());
+                    dto.setTitle(post.getTitle());
+                    dto.setProfileIcon(post.getProfileIcon());
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
+
 
     // 게시글 등록
     @PostMapping("")
-    public ResponseEntity<String> createPost(@RequestBody PostDto postDto) {
+    public ResponseEntity<Post> createPost(@RequestBody PostDto postDto) {
         Post post = new Post();
         post.setCategory(postDto.getCategory());
         post.setContent(postDto.getContent());
@@ -37,15 +51,23 @@ public class PostController {
         post.setUserId(postDto.getUserId());
         post.setTitle(postDto.getTitle());
         post.setProfileIcon(postDto.getProfileIcon());
+        post.setLikes(0); // 공감 수 초기값
 
-
-        postRepository.save(post);
-        return ResponseEntity.ok("게시글이 등록되었습니다.");
+        Post savedPost = postRepository.save(post);
+        return ResponseEntity.ok(savedPost); // 등록된 글 데이터를 프론트로 전송
     }
 
-
-
-
+    @PutMapping("/posts/{postId}/like")
+    public ResponseEntity<Void> likePost(@PathVariable Long postId) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+            post.setLikes(post.getLikes() + 1);
+            postRepository.save(post);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 
 
     // 특정 게시글 조회
@@ -75,5 +97,7 @@ public class PostController {
         }
         postRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+
     }
+
 }
