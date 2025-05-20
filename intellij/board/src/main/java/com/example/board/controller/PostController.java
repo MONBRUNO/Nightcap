@@ -4,12 +4,14 @@ import com.example.board.domain.Post;
 import com.example.board.repository.PostRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.board.dto.PostDto;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/posts")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class PostController {
 
     private final PostRepository postRepository;
@@ -25,23 +27,23 @@ public class PostController {
     }
 
     // 게시글 등록
-    @PostMapping
-    public ResponseEntity<Post> createPost(@RequestBody Post post) {
-        System.out.println("✅ createPost 요청 도착");
-        System.out.println("내용: " + post.getContent());
-        System.out.println("작성자: " + post.getAuthor());
-        System.out.println("작성자 ID: " + post.getAuthorId());
-        System.out.println("아이콘: " + post.getProfileIcon());
+    @PostMapping("")
+    public ResponseEntity<String> createPost(@RequestBody PostDto postDto) {
+        Post post = new Post();
+        post.setCategory(postDto.getCategory());
+        post.setContent(postDto.getContent());
+        post.setAuthorAlias(postDto.getAuthorAlias());
+        post.setCreatedAt(LocalDateTime.now());
+        post.setUserId(postDto.getUserId());
+        post.setTitle(postDto.getTitle());
+        post.setProfileIcon(postDto.getProfileIcon());
 
-        try {
-            Post saved = postRepository.save(post);
-            System.out.println("✅ 저장 성공: ID = " + saved.getId());
-            return ResponseEntity.ok(saved);
-        } catch (Exception e) {
-            e.printStackTrace();  // 콘솔에 전체 오류 출력
-            return ResponseEntity.internalServerError().build();
-        }
+
+        postRepository.save(post);
+        return ResponseEntity.ok("게시글이 등록되었습니다.");
     }
+
+
 
 
 

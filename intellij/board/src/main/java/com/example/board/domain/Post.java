@@ -14,11 +14,7 @@ public class Post {
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "author_alias") // 사용자 alias (예: 밤손님1, 마스터)
-    private String alias;
-
     private String title;
-
     private String category;
 
     @Column(columnDefinition = "TEXT")
@@ -27,10 +23,14 @@ public class Post {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // ✅ 추가 필드
-    private String author;
-    private Long authorId;
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // ✅ 실제 사용하는 필드만 남김
     private String profileIcon;
+    private String authorAlias;
 
     public Post() {
         this.createdAt = LocalDateTime.now();
@@ -48,14 +48,6 @@ public class Post {
 
     public void setUserId(Long userId) {
         this.userId = userId;
-    }
-
-    public String getAlias() {
-        return alias;
-    }
-
-    public void setAlias(String alias) {
-        this.alias = alias;
     }
 
     public String getTitle() {
@@ -90,29 +82,19 @@ public class Post {
         this.createdAt = createdAt;
     }
 
-    // ✅ 추가된 필드 Getter/Setter
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    public Long getAuthorId() {
-        return authorId;
-    }
-
-    public void setAuthorId(Long authorId) {
-        this.authorId = authorId;
-    }
-
     public String getProfileIcon() {
         return profileIcon;
     }
 
     public void setProfileIcon(String profileIcon) {
         this.profileIcon = profileIcon;
+    }
+
+    public String getAuthorAlias() {
+        return authorAlias;
+    }
+
+    public void setAuthorAlias(String authorAlias) {
+        this.authorAlias = authorAlias;
     }
 }
