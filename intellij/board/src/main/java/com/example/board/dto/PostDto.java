@@ -8,6 +8,7 @@ public class PostDto {
     private Long userId;
     private String title;
     private String profileIcon;
+    private int likes;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -57,6 +58,14 @@ public class PostDto {
         this.authorAlias = authorAlias;
     }
 
+    public int getLikes() {
+        return likes;
+    }
+
+    public void setLikes(int likes) {
+        this.likes = likes;
+    }
+
     public static PostDto from(com.example.board.domain.Post post) {
         PostDto dto = new PostDto();
         dto.setCategory(post.getCategory());
@@ -65,7 +74,10 @@ public class PostDto {
         dto.setUserId(post.getUserId());
         dto.setTitle(post.getTitle());
         dto.setProfileIcon(post.getProfileIcon());
+        dto.setLikes(post.getLikes());
         return dto;
     }
+
+
 
 }

@@ -9,16 +9,22 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.example.board.repository.LikeRepository;
+import com.example.board.domain.Like;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/posts")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@Transactional
 public class PostController {
 
     private final PostRepository postRepository;
+    private final LikeRepository likeRepository;
 
-    public PostController(PostRepository postRepository) {
+    public PostController(PostRepository postRepository, LikeRepository likeRepository) {
         this.postRepository = postRepository;
+        this.likeRepository = likeRepository;
     }
 
     @GetMapping("")
@@ -34,6 +40,7 @@ public class PostController {
                     dto.setUserId(post.getUserId());
                     dto.setTitle(post.getTitle());
                     dto.setProfileIcon(post.getProfileIcon());
+                    dto.setLikes(post.getLikes());
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -57,17 +64,42 @@ public class PostController {
         return ResponseEntity.ok(savedPost); // 등록된 글 데이터를 프론트로 전송
     }
 
-    @PutMapping("/posts/{postId}/like")
-    public ResponseEntity<Void> likePost(@PathVariable Long postId) {
-        Optional<Post> postOpt = postRepository.findById(postId);
-        if (postOpt.isPresent()) {
-            Post post = postOpt.get();
+    @PutMapping("/{postId}/like")
+    public ResponseEntity<String> toggleLike(
+            @PathVariable Long postId,
+            @RequestParam Long userId
+    ) {
+        System.out.println("🔥 공감 요청: userId = " + userId + ", postId = " + postId);
+
+        Optional<Post> postOptional = postRepository.findById(postId);
+        if (postOptional.isEmpty()) {
+            System.out.println("❌ 해당 post 없음");
+            return ResponseEntity.notFound().build();
+        }
+        Post post = postOptional.get();
+
+        boolean alreadyLiked = likeRepository.existsByUserIdAndPostId(userId, postId);
+        System.out.println("✅ alreadyLiked = " + alreadyLiked);
+
+        if (alreadyLiked) {
+            likeRepository.deleteByUserIdAndPostId(userId, postId);
+            post.setLikes(Math.max(0, post.getLikes() - 1));
+            postRepository.save(post);
+            System.out.println("❌ 공감 취소: unliked");
+            return ResponseEntity.ok("unliked");
+        } else {
+            Like like = new Like();
+            like.setUserId(userId);
+            like.setPostId(postId);
+            likeRepository.save(like);
+
             post.setLikes(post.getLikes() + 1);
             postRepository.save(post);
-            return ResponseEntity.ok().build();
+            System.out.println("❤️ 공감 추가: liked");
+            return ResponseEntity.ok("liked");
         }
-        return ResponseEntity.notFound().build();
     }
+
 
 
     // 특정 게시글 조회
