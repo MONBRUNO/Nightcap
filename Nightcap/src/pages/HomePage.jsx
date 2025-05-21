@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import PostModal from "../components/PostModal";
+// import PostModal from "../components/PostModal"; PostModal 관련
 
 export default function HomePage({
   posts,
@@ -10,7 +10,7 @@ export default function HomePage({
   selectedCategory,
 }) {
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [isModalOpen, setIsModalOpen] = useState(false); PostModal 관련
   const [commentReactions, setCommentReactions] = useState({});
   const [likedPosts, setLikedPosts] = useState({});
 
@@ -134,26 +134,45 @@ export default function HomePage({
   };
 
   const handleTogglePostLike = async (postId) => {
-    const alreadyLiked = likedPosts[postId];
-    if (alreadyLiked) {
-      alert("이미 공감한 글입니다.");
+    if (!isLoggedIn || !currentUser?.id) {
+      alert("공감은 로그인 후에 사용할 수 있습니다.");
       return;
     }
 
     try {
-      const res = await fetch(`http://localhost:8080/posts/${postId}/like`, {
-        method: "PUT",
-      });
+      const res = await fetch(
+        `http://localhost:8080/posts/${postId}/like?userId=${currentUser.id}`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
+      );
 
       if (!res.ok) throw new Error("서버 에러");
 
+      const result = await res.text();
+      console.log("🧪 서버 응답 결과:", result); // ✅ 이 줄 추가!
+
+      // 상태 업데이트: 공감 수 반영
       setPosts((prev) =>
         prev.map((p) =>
-          p.id === postId ? { ...p, likes: (p.likes || 0) + 1 } : p
+          p.id === postId
+            ? {
+                ...p,
+                likes:
+                  result === "liked"
+                    ? (p.likes || 0) + 1
+                    : Math.max((p.likes || 1) - 1, 0),
+              }
+            : p
         )
       );
 
-      setLikedPosts((prev) => ({ ...prev, [postId]: true }));
+      // 공감 여부 저장 (선택)
+      setLikedPosts((prev) => ({
+        ...prev,
+        [postId]: result === "liked",
+      }));
     } catch (err) {
       console.error("공감 실패:", err);
       alert("공감 처리 중 오류가 발생했습니다.");
@@ -257,12 +276,27 @@ export default function HomePage({
             window.location.href = "/login";
             return;
           }
-          setIsModalOpen(true);
+          navigate("/new"); // ✅ 페이지 이동으로 수정
         }}
         className="fixed bottom-6 right-6 bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition"
       >
         ✍️ 고민 쓰기
       </button>
+
+      {/* PostModal로 가는 버튼 */}
+      {/* <button 
+        onClick={() => {
+          if (!isLoggedIn) {
+            alert("로그인이 필요합니다.");
+            window.location.href = "/login";
+            return;
+          }
+          setIsModalOpen(true);
+        }}
+        className="fixed bottom-6 right-6 bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition"
+      >
+        ✍️ 고민 쓰기
+      </button> */}
 
       <div className="px-6 pt-6 space-y-6">
         {filteredPosts.length === 0 ? (
@@ -442,7 +476,7 @@ export default function HomePage({
         )}
       </div>
 
-      {isModalOpen && (
+      {/* {isModalOpen && (
         <PostModal
           onClose={() => setIsModalOpen(false)}
           onSubmit={(newPost) =>
@@ -453,7 +487,7 @@ export default function HomePage({
           }
           currentUser={currentUser}
         />
-      )}
+      )} */}
     </div>
   );
 }

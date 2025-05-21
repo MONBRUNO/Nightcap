@@ -6,7 +6,7 @@ import PostDetailPage from "./pages/PostDetailPage";
 import NewPostPage from "./pages/NewPostPage";
 import SignupPage from "./pages/SignupPage";
 import Header from "./components/Header";
-
+import MyPage from "./pages/MyPage";
 import "./App.css";
 
 export default function App() {
@@ -99,8 +99,14 @@ export default function App() {
               setPosts={setPosts}
               isLoggedIn={isLoggedIn}
               userId={userId}
+              currentUser={currentUser}
             />
           }
+        />
+
+        <Route
+          path="/mypage"
+          element={<MyPage currentUser={currentUser} isLoggedIn={isLoggedIn} />}
         />
       </Routes>
     </div>
