@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ 추가
 
 export default function MyPage({ currentUser, isLoggedIn }) {
   const [myPosts, setMyPosts] = useState([]);
   const [likedPosts, setLikedPosts] = useState([]);
   const [commentedPosts, setCommentedPosts] = useState([]);
+
+  const navigate = useNavigate(); // ✅ 추가
+
   const getAliasBase = (alias) => {
     return alias?.match(/^[^\d]+/)?.[0] || "기본";
   };
@@ -42,7 +46,8 @@ export default function MyPage({ currentUser, isLoggedIn }) {
           {posts.map((post) => (
             <div
               key={post.id}
-              className="bg-[#1a1b3a] p-4 rounded-xl shadow hover:shadow-lg transition"
+              onClick={() => navigate(`/posts/${post.id}`)} // ✅ 클릭 시 이동
+              className="cursor-pointer bg-[#1a1b3a] p-4 rounded-xl shadow hover:shadow-lg hover:bg-[#25274a] transition"
             >
               <div className="text-sm text-gray-400 mb-1">{post.title}</div>
               <div className="text-white">{post.content}</div>
@@ -54,58 +59,60 @@ export default function MyPage({ currentUser, isLoggedIn }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#0b0c2a] text-white px-6 py-10 space-y-12">
-      {/* 상단 헤더 + 로그아웃 */}
-      <div className="w-2/3 mx-auto bg-[#1a1b3a] p-6 rounded-xl shadow mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <img
-              src={
-                aliasIcons[getAliasBase(currentUser?.alias)] ||
-                "/icons/default.png"
-              }
-              alt="icon"
-              className="w-6 h-6"
-            />
-            {currentUser?.alias || "사용자"}님의 마이페이지
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            내가 남긴 글과 공감, 댓글들을 확인해보세요 😊
-          </p>
+    <div className="min-h-screen bg-[#0b0c2a] text-white px-6 py-10">
+      <div className="w-2/3 mx-auto space-y-12">
+        {/* 상단 헤더 + 로그아웃 */}
+        <div className="bg-[#1a1b3a] p-6 rounded-xl shadow flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <img
+                src={
+                  aliasIcons[getAliasBase(currentUser?.alias)] ||
+                  "/icons/default.png"
+                }
+                alt="icon"
+                className="w-6 h-6"
+              />
+              {currentUser?.alias || "사용자"}님의 마이페이지
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
+              내가 남긴 글과 공감, 댓글들을 확인해보세요 😊
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem("user");
+              window.location.href = "/login";
+            }}
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold text-sm transition"
+          >
+            로그아웃
+          </button>
         </div>
 
-        <button
-          onClick={() => {
-            localStorage.removeItem("user");
-            window.location.href = "/login";
-          }}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold text-sm transition"
-        >
-          로그아웃
-        </button>
+        <Section
+          title="📌 내가 쓴 글"
+          posts={myPosts}
+          emptyMessage="작성한 글이 없습니다."
+        />
+
+        <div className="border-t border-gray-700 my-8 w-2/3 mx-auto" />
+
+        <Section
+          title="💖 공감한 글"
+          posts={likedPosts}
+          emptyMessage="공감한 글이 없습니다."
+        />
+
+        <div className="border-t border-gray-700 my-8 w-2/3 mx-auto" />
+
+        <Section
+          title="💬 댓글 단 글"
+          posts={commentedPosts}
+          emptyMessage="댓글 단 글이 없습니다."
+        />
       </div>
-
-      <Section
-        title="📌 내가 쓴 글"
-        posts={myPosts}
-        emptyMessage="작성한 글이 없습니다."
-      />
-
-      <div className="border-t border-gray-700 my-8 w-2/3 mx-auto" />
-
-      <Section
-        title="💖 공감한 글"
-        posts={likedPosts}
-        emptyMessage="공감한 글이 없습니다."
-      />
-
-      <div className="border-t border-gray-700 my-8 w-2/3 mx-auto" />
-
-      <Section
-        title="💬 댓글 단 글"
-        posts={commentedPosts}
-        emptyMessage="댓글 단 글이 없습니다."
-      />
     </div>
   );
 }
