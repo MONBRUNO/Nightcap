@@ -11,11 +11,12 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "post_id", nullable = false)
-    private Long postId;
+    @ManyToOne(fetch = FetchType.LAZY) // ✅ Post 연관관계 설정
+    @JoinColumn(name = "post_id", nullable = false)
+    private Post post;
 
     @Column(name = "user_id")
-    private Integer userId;  // users 테이블과 맞추기 위해 INT
+    private Integer userId;
 
     @Column(name = "author_alias")
     private String authorAlias;
@@ -32,33 +33,25 @@ public class Comment {
     @Column(name = "author")
     private String author;
 
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
 
-    // === 기본 생성자 ===
     public Comment() {}
 
     // === Getter / Setter ===
+
     public Long getId() {
         return id;
     }
 
-    public Long getPostId() {
-        return postId;
+    public Post getPost() {
+        return post;
     }
 
-    public void setPostId(Long postId) {
-        this.postId = postId;
+    public void setPost(Post post) {
+        this.post = post;
     }
 
     public Integer getUserId() {
@@ -99,5 +92,13 @@ public class Comment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
     }
 }
