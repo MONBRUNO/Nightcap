@@ -11,7 +11,7 @@ import "./App.css";
 
 export default function App() {
   const location = useLocation();
-  const hideHeaderRoutes = ["/login", "/signup"];
+  const hideHeaderRoutes = ["/login", "/signup", "/mypage"];
   const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
 
   const [message, setMessage] = useState("");

@@ -55,7 +55,7 @@ export default function Header({
                 className="text-sm text-blue-300 font-semibold cursor-pointer"
                 onClick={() => navigate("/mypage")}
               >
-                {currentUser.alias}의 nightcap
+                {currentUser.alias}
               </span>
             </>
           ) : (

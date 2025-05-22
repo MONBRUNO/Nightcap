@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-// import PostModal from "../components/PostModal"; PostModal 관련
 
 export default function HomePage({
   posts,
@@ -10,7 +9,6 @@ export default function HomePage({
   selectedCategory,
 }) {
   const navigate = useNavigate();
-  // const [isModalOpen, setIsModalOpen] = useState(false); PostModal 관련
   const [commentReactions, setCommentReactions] = useState({});
   const [likedPosts, setLikedPosts] = useState({});
 
@@ -283,21 +281,6 @@ export default function HomePage({
         ✍️ 고민 쓰기
       </button>
 
-      {/* PostModal로 가는 버튼 */}
-      {/* <button 
-        onClick={() => {
-          if (!isLoggedIn) {
-            alert("로그인이 필요합니다.");
-            window.location.href = "/login";
-            return;
-          }
-          setIsModalOpen(true);
-        }}
-        className="fixed bottom-6 right-6 bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition"
-      >
-        ✍️ 고민 쓰기
-      </button> */}
-
       <div className="px-6 pt-6 space-y-6">
         {filteredPosts.length === 0 ? (
           <div className="text-center py-10 text-gray-400">
@@ -475,19 +458,6 @@ export default function HomePage({
           ))
         )}
       </div>
-
-      {/* {isModalOpen && (
-        <PostModal
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={(newPost) =>
-            setPosts((prev) => [
-              ...prev,
-              { ...newPost, likes: 0, comments: [] },
-            ])
-          }
-          currentUser={currentUser}
-        />
-      )} */}
     </div>
   );
 }
