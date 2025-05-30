@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import com.example.board.repository.LikeRepository;
 import com.example.board.domain.Like;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/posts")
@@ -111,25 +112,38 @@ public class PostController {
     }
 
     // 게시글 수정
-    @PutMapping("/{id}")
-    public ResponseEntity<Post> updatePost(@PathVariable Long id, @RequestBody Post updated) {
-        return postRepository.findById(id).map(post -> {
-            post.setCategory(updated.getCategory());
-            post.setContent(updated.getContent());
-            post.setTitle(updated.getTitle());
-            return ResponseEntity.ok(postRepository.save(post));
-        }).orElse(ResponseEntity.notFound().build());
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> updatePost(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Optional<Post> optionalPost = postRepository.findById(id);
+        if (optionalPost.isEmpty()) return ResponseEntity.notFound().build();
+
+        Post post = optionalPost.get();
+
+        if (body.containsKey("content")) {
+            post.setContent(body.get("content"));
+        }
+        if (body.containsKey("title")) {
+            post.setTitle(body.get("title"));
+        }
+        if (body.containsKey("category")) {
+            post.setCategory(body.get("category"));
+        }
+
+        postRepository.save(post);
+        return ResponseEntity.ok().build();
     }
+
 
     // 게시글 삭제
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+    public ResponseEntity<?> deletePost(@PathVariable Long id) {
         if (!postRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
         postRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
-
+        return ResponseEntity.ok().build();
     }
+
+
 
 }
