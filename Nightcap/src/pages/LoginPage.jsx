@@ -30,26 +30,27 @@ export default function LoginPage({
         return;
       }
 
+      const user = await res.json();
+      setCurrentUser(user); // alias 포함된 전체 유저 객체
+      setIsLoggedIn(true);
+      setUserId(user.id);
+      setLoginSuccessMsg("로그인 완료!");
+
+      // ✅ 저장 여부 처리
       if (saveId) {
         localStorage.setItem("savedUsername", username);
       } else {
         localStorage.removeItem("savedUsername");
       }
 
-      const user = await res.json();
-      setCurrentUser(user); // alias 포함된 전체 유저 객체
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("loginTime", Date.now());
 
-      setIsLoggedIn(true);
-      setUserId(user.id);
-      setCurrentUser(user);
-
-      setLoginSuccessMsg("로그인 완료!");
       setTimeout(() => {
         setLoginSuccessMsg("");
         navigate("/");
-      }, 2000);
-      // 로그인 성공 후
-      localStorage.setItem("user", JSON.stringify(user));
+      }, 1000);
+
     } catch (error) {
       setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
     }

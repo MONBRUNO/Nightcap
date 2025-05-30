@@ -8,6 +8,7 @@ import SignupPage from "./pages/SignupPage";
 import Header from "./components/Header";
 import MyPage from "./pages/MyPage";
 import "./App.css";
+import CategoryFilter from "./components/CategoryFilter";
 
 export default function App() {
   const location = useLocation();
@@ -32,12 +33,29 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem("user");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setIsLoggedIn(true);
-      setCurrentUser(parsed);
-      setUserId(parsed.id);
+    const savedUser = localStorage.getItem("user");
+    const loginTime = localStorage.getItem("loginTime");
+
+    const SESSION_DURATION = 1000 * 60 * 60; // 1시간
+
+    if (savedUser && loginTime) {
+      const now = Date.now();
+      const elapsed = now - parseInt(loginTime, 10);
+
+      if (elapsed < SESSION_DURATION) {
+        const parsed = JSON.parse(savedUser);
+        setIsLoggedIn(true);
+        setCurrentUser(parsed);
+        setUserId(parsed.id);
+      } else {
+        // ⏱ 세션 만료
+        localStorage.removeItem("user");
+        localStorage.removeItem("loginTime");
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setUserId(null);
+        alert("세션이 만료되어 자동 로그아웃 되었습니다.");
+      }
     }
   }, []);
 
@@ -50,6 +68,14 @@ export default function App() {
           setSelectedCategory={setSelectedCategory}
         />
       )}
+
+      {!["/new", "/signup", "/login"].includes(location.pathname) &&
+        !location.pathname.startsWith("/posts") && (
+          <CategoryFilter
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+          />
+        )}
 
       <Routes>
         <Route

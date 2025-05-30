@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // ✅ location 추가
 
 export default function NewPostPage({ setPosts, currentUser }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editingPost = location.state?.post || null; // ✅ post 데이터 받기
 
   const categories = [
     "연애",
@@ -15,8 +17,10 @@ export default function NewPostPage({ setPosts, currentUser }) {
     "당근",
     "TMI",
   ];
-  const [category, setCategory] = useState("연애");
-  const [content, setContent] = useState("");
+
+  // ✅ 초기값: 수정이면 기존 값, 아니면 기본값
+  const [category, setCategory] = useState(editingPost?.category || "연애");
+  const [content, setContent] = useState(editingPost?.content || "");
 
   useEffect(() => {
     if (!currentUser?.id) {
@@ -37,7 +41,7 @@ export default function NewPostPage({ setPosts, currentUser }) {
     return icons[base] || "/icons/default.png";
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!content.trim()) {
@@ -54,29 +58,49 @@ export default function NewPostPage({ setPosts, currentUser }) {
       profileIcon: getAliasIcon(currentUser?.alias),
     };
 
-    fetch("http://localhost:8080/posts", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(postData),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("서버 응답 실패");
-        return res.json();
-      })
-      .then((newPost) => {
+    try {
+      if (editingPost) {
+        // ✅ 수정 모드
+        const res = await fetch(
+          `http://localhost:8080/posts/${editingPost.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content,
+              title: content.slice(0, 15),
+              category,
+            }),
+          }
+        );
+
+        if (!res.ok) throw new Error("수정 실패");
+        alert("수정이 완료되었습니다.");
+      } else {
+        // ✅ 작성 모드
+        const res = await fetch("http://localhost:8080/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(postData),
+        });
+
+        if (!res.ok) throw new Error("등록 실패");
+        const newPost = await res.json();
         setPosts((prev) => [...prev, newPost]);
-        navigate("/");
-      })
-      .catch((err) => {
-        console.error("등록 실패:", err);
-        alert("등록 중 오류가 발생했습니다.");
-      });
+      }
+
+      navigate("/");
+    } catch (err) {
+      console.error("오류:", err);
+      alert("서버 오류가 발생했습니다.");
+    }
   };
 
   return (
     <div className="bg-[#0b0c2a] min-h-screen text-white px-6 py-10">
-      <h2 className="text-2xl font-bold mb-6">새 고민 작성</h2>
+      <h2 className="text-2xl font-bold mb-6">
+        {editingPost ? "게시글 수정" : "새 고민 작성"}
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1">카테고리 선택</label>

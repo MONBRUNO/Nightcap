@@ -1,0 +1,549 @@
+
+
+========== 1) 프로젝트 개요 소개.txt ==========
+
+1) 프로젝트 개요 소개
+ - nightcap 프로젝트는 React 기반으로 구성됨
+ - 주요 디렉토리: components, pages, config, src, public, .env, .gitignore
+
+2) 공통 컴포넌트 (components/)
+ - LogoBlock.jsx       : 상단에 표시되는 로고 UI 컴포넌트
+ - Header.jsx          : 로그인 상태에 따라 변하는 상단 메뉴바 (카테고리 필터 포함)
+
+3) 페이지 컴포넌트 (pages/)
+ - HomePage.jsx        : 게시글 리스트 및 메인 화면 구성
+ - LoginPage.jsx       : 로그인 입력 처리, localStorage 연동
+ - SignupPage.jsx      : 회원가입 폼 및 서버 연동
+ - NewPostPage.jsx     : 게시글 작성 및 제출 기능
+ - PostDetailPage.jsx  : 게시글 상세 보기 + 댓글 렌더링
+ - MyPage.jsx          : 내가 쓴 글 / 좋아요 / 댓글 확인 페이지
+
+4) 설정 및 유틸 (config/)
+ - db.js               : 서버 주소, 공통 통신 설정 등 정의
+
+5) 루트 구성 (src/)
+ - App.jsx             : 전체 앱 구조 및 라우팅 처리
+ - index.js            : App 컴포넌트를 DOM에 마운트 (React 진입점)
+
+6) 기타 설정
+ - .env                : 서버 주소, API 키 등 환경 변수 설정
+ - .gitignore          : Git에 포함시키지 않을 파일 목록 (예: node_modules, .env)
+
+
+========== App_발표대본.txt ==========
+
+📄 App.jsx 발표 대본
+
+---
+
+📌 시작 멘트  
+App.jsx는 전체 리액트 애플리케이션의 **루트 컴포넌트**로서,  
+라우팅 설정과 전역 상태 관리, 그리고 Header 컴포넌트 조건부 렌더링을 담당합니다.
+
+---
+
+✅ 1. 라우팅 구성 및 페이지 전환
+
+```jsx
+import { Routes, Route, useLocation } from "react-router-dom";
+```
+
+- `react-router-dom`의 `Routes`와 `Route`를 사용해 페이지별 컴포넌트를 매핑합니다.
+- URL 경로에 따라 각각의 페이지가 렌더링되며,  
+  예를 들어 `/login`으로 접속하면 `LoginPage`가, `/new`이면 `NewPostPage`가 보여집니다.
+
+---
+
+✅ 2. 헤더 컴포넌트 조건부 렌더링
+
+```jsx
+const hideHeaderRoutes = ["/login", "/signup", "/mypage"];
+const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
+
+{!shouldHideHeader && (
+  <Header
+    currentUser={currentUser}
+    selectedCategory={selectedCategory}
+    setSelectedCategory={setSelectedCategory}
+  />
+)}
+```
+
+- 특정 경로에서는 상단 메뉴(헤더)를 숨기기 위해 조건부 렌더링이 설정되어 있습니다.
+- 예를 들어 로그인, 회원가입, 마이페이지에서는 헤더를 감춥니다.
+- 그 외의 페이지에서는 헤더가 항상 보여지며, 사용자 정보와 카테고리 필터 기능을 포함합니다.
+
+---
+
+✅ 3. 전역 상태 관리
+
+```jsx
+const [message, setMessage] = useState("");
+const [posts, setPosts] = useState([]);
+const [isLoggedIn, setIsLoggedIn] = useState(false);
+const [authToken, setAuthToken] = useState(null);
+const [userId, setUserId] = useState(null);
+const [selectedCategory, setSelectedCategory] = useState("전체");
+const [currentUser, setCurrentUser] = useState(null);
+```
+
+- 상태 훅 `useState`를 통해 로그인 여부, 사용자 정보, 게시글 목록, 카테고리 필터 등  
+  다양한 전역 상태를 관리합니다.
+- 자식 컴포넌트로 props를 전달하여 UI가 일관되게 동작하도록 연결됩니다.
+
+---
+
+✅ 4. 게시글 목록 불러오기
+
+```jsx
+useEffect(() => {
+  fetch("http://localhost:8080/posts")
+    .then((res) => res.json())
+    .then((data) => setPosts(data));
+}, []);
+```
+
+- 페이지가 처음 로드될 때 한 번만 게시글 목록을 백엔드 서버에서 불러옵니다.
+- 받은 데이터를 `posts` 상태에 저장하고, 이는 HomePage에서 사용됩니다.
+
+---
+
+✅ 5. 로그인 정보 복원
+
+```jsx
+useEffect(() => {
+  const saved = localStorage.getItem("user");
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    setIsLoggedIn(true);
+    setCurrentUser(parsed);
+    setUserId(parsed.id);
+  }
+}, []);
+```
+
+- 사용자가 이전에 로그인한 정보가 localStorage에 저장되어 있다면,
+  해당 정보를 불러와 로그인 상태를 유지합니다.
+- 이를 통해 새로고침 시에도 로그인이 유지됩니다.
+
+---
+
+📌 마무리 멘트  
+App.jsx는 리액트 애플리케이션의 중심으로,  
+각 페이지의 진입을 제어하고 전역 상태를 관리하며  
+사용자 경험을 일관성 있게 유지하는 핵심 파일입니다.  
+
+이후 각 페이지는 이 App.jsx의 설정을 기반으로 동작하게 됩니다.
+
+
+========== Header_detailed.txt ==========
+
+📄 Header.jsx 발표 대본
+
+📌 시작 멘트
+다음은 상단 메뉴바 역할을 하는 Header.jsx 파일입니다.
+이 컴포넌트는 카테고리 필터, 로고, 사용자 로그인 상태에 따른 UI를
+동시에 담당하는 핵심 UI 컴포넌트입니다.
+
+✅ 1. 사용자 상태에 따른 우측 버튼 구성
+
+{currentUser ? (
+  <>
+    <img src={{...}} />
+    <span>{{currentUser.alias}}</span>
+  </>
+) : (
+  <button onClick={{...}}>로그인</button>
+)}
+
+- 로그인 상태일 경우, 사용자 아바타와 별명을 표시하고
+  클릭 시 마이페이지로 이동합니다.
+- 로그인하지 않은 상태라면 로그인 버튼이 보여집니다.
+
+✅ 2. 로고 중앙 정렬
+
+<div className="flex justify-center">
+  <LogoBlock />
+</div>
+
+- 중앙에는 LogoBlock 컴포넌트를 삽입해 일관된 디자인을 유지합니다.
+- 해당 로고는 클릭 시 홈으로 이동하는 기능이 포함되어 있습니다.
+
+✅ 3. 카테고리 필터 버튼
+
+<button onClick={() => setSelectedCategory(cat)} className="...">
+  <img src={`/icons/${categoryIcons[cat]}.png`} />
+  {{cat}}
+</button>
+
+- 게시글을 카테고리별로 필터링할 수 있게 만들어주는 버튼입니다.
+- 클릭 시 selectedCategory 상태가 변경되고,
+  해당 카테고리만 필터링되어 화면에 표시됩니다.
+
+📌 마무리 멘트
+정리하자면, Header.jsx는
+사용자의 로그인 상태에 따라 적절한 UI를 보여주고,
+로고와 카테고리 필터까지 포함된 상단 내비게이션 바 역할을 합니다.
+
+
+========== HomePage_발표대본.txt ==========
+
+📄 HomePage.jsx 발표 대본
+
+📌 시작 멘트
+HomePage.jsx는 메인 페이지로, 게시글 리스트와 댓글 미리보기, 공감 기능 등
+사용자와의 다양한 상호작용을 구현한 주요 화면입니다.
+
+✅ 1. 카테고리 필터링
+
+```jsx
+const filteredPosts = selectedCategory === "전체"
+  ? posts
+  : posts.filter((post) => post.category === selectedCategory);
+```
+
+- 사용자가 선택한 카테고리에 따라 게시글을 필터링합니다.
+- 카테고리가 "전체"일 경우 모든 게시글을 보여주고, 아니면 해당 카테고리만 필터링합니다.
+
+✅ 2. 댓글 미리보기 및 정렬
+
+```jsx
+[...post.comments]
+  .sort((a, b) =>
+    (b.likes || 0) !== (a.likes || 0)
+      ? (b.likes || 0) - (a.likes || 0)
+      : new Date(a.createdAt) - new Date(b.createdAt)
+  )
+  .slice(0, 2)
+```
+
+- 각 게시글에서 좋아요 수를 기준으로 상위 2개 댓글을 정렬해 미리 보여줍니다.
+
+✅ 3. 공감 기능
+
+```jsx
+const handleTogglePostLike = async (postId) => { ... }
+```
+
+- 로그인된 사용자는 게시글에 공감(좋아요)을 누를 수 있으며, 누른 상태는 상태 변수로 관리됩니다.
+- 서버에 PUT 요청을 보내 공감 여부를 업데이트합니다.
+
+✅ 4. 댓글 등록
+
+```jsx
+<form onSubmit={(e) => { ... }}>
+  <input name="comment" ... />
+</form>
+```
+
+- 로그인된 사용자는 게시글 아래에서 댓글을 작성할 수 있습니다.
+- 댓글 작성 시 POST 요청으로 서버에 저장되고, 성공 시 화면에 추가됩니다.
+
+✅ 5. 댓글 반응 기능
+
+```jsx
+<button onClick={() => handleCommentReaction(post.id, c.id, "like")}>
+```
+
+- 각 댓글에 대해 좋아요 / 싫어요를 표시할 수 있으며,
+  해당 반응은 상태 값으로 저장되고 즉시 반영됩니다.
+
+📌 마무리 멘트
+HomePage.jsx는 단순한 리스트를 넘어서, 공감, 댓글 등록 및 미리보기, 필터링 등
+사용자의 다양한 참여를 유도하는 핵심 인터페이스입니다.
+
+
+========== LoginPage_발표대본.txt ==========
+
+📄 LoginPage.jsx 발표 대본
+
+📌 시작 멘트
+LoginPage.jsx는 사용자 인증을 위한 로그인 화면을 구성하는 컴포넌트입니다.
+
+✅ 1. 로그인 요청 처리
+
+```jsx
+const res = await fetch("http://localhost:8080/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ username, password }),
+});
+```
+
+- 사용자 입력 정보를 서버에 POST 방식으로 전송하여 로그인 요청을 처리합니다.
+
+✅ 2. 로그인 상태 저장
+
+```jsx
+setIsLoggedIn(true);
+setUserId(user.id);
+setCurrentUser(user);
+localStorage.setItem("user", JSON.stringify(user));
+```
+
+- 로그인 성공 시 전역 상태와 로컬스토리지에 사용자 정보를 저장합니다.
+- 이후 홈으로 이동되며, 새로고침 후에도 로그인 상태가 유지됩니다.
+
+✅ 3. 아이디 저장 기능
+
+```jsx
+if (saveId) {
+  localStorage.setItem("savedUsername", username);
+}
+```
+
+- 체크박스를 통해 아이디를 저장할 수 있으며,
+  저장된 값은 로그인 페이지 접속 시 자동으로 입력됩니다.
+
+✅ 4. UI 구성
+
+```jsx
+<form onSubmit={handleLogin}>
+  <input type="text" ... />
+  <input type="password" ... />
+</form>
+```
+
+- 아이디, 비밀번호 입력창과 체크박스, 로그인 버튼이 포함된 폼을 제공합니다.
+- 입력값에 따라 로그인 처리 결과 메시지가 다르게 표시됩니다.
+
+📌 마무리 멘트
+LoginPage.jsx는 사용자의 인증을 처리하고, 로그인 후 전체 애플리케이션 상태를
+초기화해주는 중요한 역할을 수행합니다.
+
+
+========== LogoBlock_detailed.txt ==========
+
+📄 LogoBlock.jsx 발표 대본
+
+📌 시작 멘트
+다음은 로고와 앱의 간단한 설명을 담당하는 LogoBlock.jsx입니다.
+이 컴포넌트는 홈 화면으로 돌아가는 역할도 함께 합니다.
+
+✅ 1. 클릭 시 홈으로 이동
+
+<div onClick={() => navigate("/")} className="cursor-pointer">
+
+- 사용자가 로고를 클릭하면 / 경로로 이동합니다.
+- 즉, 홈 화면으로 이동하는 기능을 포함한 로고 블록입니다.
+
+✅ 2. 로고와 슬로건 표시
+
+<h1>🍸 Nightcap</h1>
+<p>어두운 밤, 익명의 고민과 기발한 조언이 오가는 바</p>
+
+- 타이틀과 함께 간단한 슬로건을 나타냅니다.
+- 폰트 크기와 색상을 통해 시각적으로 강조되어 있습니다.
+
+📌 마무리 멘트
+결론적으로, LogoBlock.jsx는
+사용자에게 브랜드 인식을 주고,
+홈으로 이동하는 직관적 인터페이스를 제공합니다.
+
+
+========== MyPage_발표대본.txt ==========
+
+📄 MyPage.jsx 발표 대본
+
+📌 시작 멘트
+MyPage.jsx는 사용자가 작성한 글, 댓글 단 글, 좋아요 누른 글을 한눈에 볼 수 있는 개인화 페이지입니다.
+
+✅ 1. 사용자 인증 체크 및 초기화
+
+```jsx
+useEffect(() => {
+  if (!currentUser) navigate("/login");
+}, []);
+```
+
+- 로그인되지 않은 사용자는 로그인 페이지로 리디렉션됩니다.
+- 로그인된 경우에만 데이터가 표시됩니다.
+
+✅ 2. 사용자 데이터 fetch
+
+```jsx
+useEffect(() => {
+  fetch(`/users/${currentUser.id}/posts`) ...
+  fetch(`/users/${currentUser.id}/commented-posts`) ...
+  fetch(`/users/${currentUser.id}/liked-posts`) ...
+```
+
+- 각각 작성글, 댓글 단 글, 좋아요한 글을 백엔드로부터 fetch합니다.
+- useState를 사용해 각 항목을 배열로 저장합니다.
+
+✅ 3. 탭 전환 UI
+
+```jsx
+{["작성글", "댓글단 글", "좋아요"].map(tab => (
+  <button onClick={() => setSelectedTab(tab)}>{tab}</button>
+))}
+```
+
+- 버튼 클릭 시 `selectedTab` 상태가 바뀌고 각 항목이 조건부 렌더링 됩니다.
+
+✅ 4. 포스트 렌더링
+
+```jsx
+{selectedTab === "작성글" && myPosts.map(...)}
+```
+
+- 선택된 탭에 맞는 포스트 목록을 렌더링합니다.
+- PostCard 형식으로 깔끔하게 표현합니다.
+
+📌 마무리 멘트
+MyPage는 유저가 활동한 내용을 정리해서 보여주는 마이페이지로,
+글, 댓글, 좋아요 기반 정보를 효율적으로 제공합니다.
+
+
+========== NewPostPage_발표대본.txt ==========
+
+📄 NewPostPage.jsx 발표 대본
+
+📌 시작 멘트
+NewPostPage.jsx는 사용자가 새로운 게시글을 작성할 수 있는 입력 페이지입니다.
+
+✅ 1. 로그인 여부 확인
+
+```jsx
+useEffect(() => {
+  if (!currentUser) navigate("/login");
+}, []);
+```
+
+- 비로그인 사용자는 글 작성 페이지 접근 시 로그인 페이지로 리디렉션됩니다.
+
+✅ 2. 카테고리 및 내용 입력
+
+```jsx
+<select value={category} onChange={e => setCategory(e.target.value)} />
+<textarea value={content} onChange={e => setContent(e.target.value)} />
+```
+
+- 드롭다운 메뉴를 통해 카테고리를 선택하고,
+- 텍스트영역에 고민이나 내용을 작성합니다.
+
+✅ 3. 제출 처리
+
+```jsx
+const handleSubmit = async (e) => {
+  await fetch("/posts", {
+    method: "POST",
+    headers: { ... },
+    body: JSON.stringify({ ... })
+  });
+};
+```
+
+- 사용자가 작성한 데이터는 JSON 형태로 서버에 POST 요청됩니다.
+- 저장이 완료되면 홈화면으로 리디렉션됩니다.
+
+📌 마무리 멘트
+NewPostPage는 사용자 고민이나 사연을 입력받아
+카테고리 분류와 함께 저장하는 기능을 담당합니다.
+
+
+========== PostDetailPage_detailed.txt ==========
+
+📄 PostDetailPage.jsx 발표 대본
+
+📌 시작 멘트
+PostDetailPage.jsx는 게시글의 상세 내용을 보여주는 페이지입니다.
+특히, 댓글 조회 및 작성, 그리고 ChatGPT를 활용한 자동 댓글 생성 기능까지 포함된 복합 기능 페이지입니다.
+
+✅ 1. 게시글 정보 조회 및 유효성 검증
+
+```jsx
+const { postId } = useParams();
+const post = posts.find(p => p.id === Number(postId));
+if (!post) return <Navigate to="/" />;
+```
+
+- URL에서 postId를 받아 해당 게시글을 posts 배열에서 찾아옵니다.
+- post가 존재하지 않을 경우 홈으로 리디렉션합니다.
+- 게시글이 있으면 제목, 내용, 작성자, 카테고리 등을 화면에 출력합니다.
+
+✅ 2. 댓글 조회 및 상태 관리
+
+```jsx
+useEffect(() => {
+  fetch(`/api/comments/${postId}`)
+    .then(res => res.json())
+    .then(data => setComments(data));
+}, [postId]);
+```
+
+- useEffect 훅을 통해 게시글 로딩 시 댓글 데이터를 백엔드로부터 fetch합니다.
+- 댓글은 useState를 이용해 상태 관리되며, 배열 형태로 저장됩니다.
+
+✅ 3. GPT 자동 댓글 기능
+
+```jsx
+const handleGPTComment = async () => {
+  const res = await fetch("/api/gpt", { ... });
+  const data = await res.json();
+  setComments(prev => [...prev, data.comment]);
+};
+```
+
+- 'GPT 댓글 보기' 버튼 클릭 시, OpenAI API를 사용해 자동 상담형 댓글을 생성합니다.
+- post.content를 기반으로 조언을 생성하고, 댓글 형식으로 화면에 삽입합니다.
+
+✅ 4. 좋아요/싫어요 반응 기능
+
+```jsx
+<button onClick={() => handleReaction(comment.id, "like")}>👍</button>
+```
+
+- 각 댓글에는 👍 / 👎 버튼이 있으며, 누를 때마다 commentReactions 상태와 댓글의 like/dislike 수가 업데이트됩니다.
+- 이미 누른 반응을 다시 누르면 반응이 취소되고, 다른 반응을 누르면 전환됩니다.
+
+✅ 5. 댓글 작성 폼
+
+```jsx
+<form onSubmit={handleSubmit}>
+  <textarea ... />
+  <button type="submit">작성</button>
+</form>
+```
+
+- 로그인된 사용자만 댓글을 작성할 수 있으며, 작성 후 백엔드에 POST 요청으로 저장됩니다.
+- 저장이 성공하면 새 댓글을 댓글 리스트에 추가합니다.
+
+📌 마무리 멘트
+PostDetailPage는 단순한 상세보기 페이지를 넘어
+AI 기반 자동 댓글, 댓글 반응 기능 등 다양한 상호작용 기능을 포함한 고도화된 페이지입니다.
+
+
+========== SignupPage_발표대본.txt ==========
+
+📄 SignupPage.jsx 발표 대본
+
+📌 시작 멘트
+SignupPage.jsx는 사용자 회원가입 기능을 제공하는 페이지입니다.
+
+✅ 1. 폼 구성 및 상태 관리
+
+```jsx
+<input value={email} onChange={e => setEmail(e.target.value)} />
+<input value={password} onChange={e => setPassword(e.target.value)} />
+```
+
+- 이메일과 비밀번호 입력값을 상태로 관리합니다.
+
+✅ 2. 제출 처리
+
+```jsx
+const handleSubmit = async (e) => {
+  await fetch("/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+};
+```
+
+- 입력된 값을 JSON으로 백엔드에 전송합니다.
+- 가입 성공 시 로그인 페이지로 이동됩니다.
+
+📌 마무리 멘트
+SignupPage는 새 사용자가 앱을 사용할 수 있도록
+기본 회원 정보를 입력받고 서버에 저장하는 역할을 합니다.

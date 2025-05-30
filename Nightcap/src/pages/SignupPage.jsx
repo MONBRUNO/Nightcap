@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import LogoBlock from "../components/LogoBlock";
 
 export default function SignupPage() {
@@ -8,6 +9,7 @@ export default function SignupPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("밤손님");
+  const navigate = useNavigate();
 
   const themes = ["밤손님", "마스터", "요정", "해결사", "바텐더"];
 
@@ -31,15 +33,13 @@ export default function SignupPage() {
       const msg = await res.text();
 
       if (res.ok) {
-        setSuccessMsg(msg);
         setSuccessMsg("회원가입이 완료되었습니다!");
+        setTimeout(() => navigate("/login"), 1000);
         setUsername("");
         setPassword("");
         setConfirmPassword("");
       } else {
-        const err = await res.text();
         setErrorMsg(`회원가입 실패: ${msg}`);
-        setErrorMsg(`회원가입 실패: ${err}`);
       }
     } catch (err) {
       setErrorMsg("서버와 통신 중 문제가 발생했습니다.");
@@ -117,7 +117,7 @@ export default function SignupPage() {
 
         <button
           className="mt-4 w-full text-sm text-blue-300 hover:underline"
-          onClick={() => (window.location.href = "/login")}
+          onClick={() => navigate("/login")}
         >
           로그인 페이지로 돌아가기
         </button>
