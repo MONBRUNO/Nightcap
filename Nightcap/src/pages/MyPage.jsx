@@ -60,6 +60,15 @@ export default function MyPage({ currentUser, isLoggedIn }) {
 
   return (
     <div className="min-h-screen bg-[#0b0c2a] text-white px-6 py-10">
+      <div className="w-2/3 mx-auto mb-6 flex justify-start">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center px-4 py-2 bg-[#1a1b3a] text-blue-300 rounded-full text-sm font-semibold shadow hover:bg-[#2a2c4a] hover:text-blue-200 transition"
+        >
+          ← 뒤로가기
+        </button>
+      </div>
+
       <div className="w-2/3 mx-auto space-y-12">
         {/* 상단 헤더 + 로그아웃 */}
         <div className="bg-[#1a1b3a] p-6 rounded-xl shadow flex justify-between items-center">

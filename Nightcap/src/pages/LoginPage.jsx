@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import LogoBlock from "../components/LogoBlock";
 import { useNavigate } from "react-router-dom";
 
@@ -10,9 +10,14 @@ export default function LoginPage({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [saveId, setSaveId] = useState(false);
-  const navigate = useNavigate();
   const [loginSuccessMsg, setLoginSuccessMsg] = useState("");
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const usernameRef = useRef(null);
+
+  useEffect(() => {
+    usernameRef.current?.focus();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -31,38 +36,23 @@ export default function LoginPage({
       }
 
       const user = await res.json();
-      setCurrentUser(user); // alias 포함된 전체 유저 객체
+      setCurrentUser(user);
       setIsLoggedIn(true);
       setUserId(user.id);
       setLoginSuccessMsg("로그인 완료!");
 
-      // ✅ 저장 여부 처리
-      if (saveId) {
-        localStorage.setItem("savedUsername", username);
-      } else {
-        localStorage.removeItem("savedUsername");
-      }
-
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("loginTime", Date.now());
+      const storage = keepLoggedIn ? localStorage : sessionStorage;
+      storage.setItem("user", JSON.stringify(user));
+      storage.setItem("loginTime", Date.now());
 
       setTimeout(() => {
         setLoginSuccessMsg("");
-        navigate("/");
+        navigate("/home");
       }, 1000);
-
     } catch (error) {
       setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
     }
   };
-
-  useEffect(() => {
-    const saved = localStorage.getItem("savedUsername");
-    if (saved) {
-      setUsername(saved);
-      setSaveId(true);
-    }
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#0b0c2a] text-white flex flex-col items-center justify-center px-4">
@@ -78,11 +68,15 @@ export default function LoginPage({
           <div>
             <label className="block mb-1 text-sm font-medium">아이디</label>
             <input
+              ref={usernameRef}
               type="text"
               className="w-full p-2 rounded bg-white text-black"
               required
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                const onlyEnglish = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                setUsername(onlyEnglish);
+              }}
             />
           </div>
           <div>
@@ -92,20 +86,24 @@ export default function LoginPage({
               className="w-full p-2 rounded bg-white text-black"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                const noKorean = e.target.value.replace(/[ㄱ-ㅎㅏ-ㅣ가-힣]/g, "");
+                setPassword(noKorean);
+              }}
             />
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* ✅ 로그인 상태 유지 */}
+          <div className="flex items-center gap-2 text-sm text-white">
             <input
               type="checkbox"
-              id="saveId"
-              checked={saveId}
-              onChange={() => setSaveId(!saveId)}
+              id="keepLoggedIn"
+              checked={keepLoggedIn}
+              onChange={() => setKeepLoggedIn(!keepLoggedIn)}
             />
-            <label htmlFor="saveId" className="text-sm">
-              아이디 저장
-            </label>
+            <label htmlFor="keepLoggedIn">로그인 상태 유지</label>
           </div>
+
           <button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 rounded"

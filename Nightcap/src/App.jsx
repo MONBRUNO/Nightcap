@@ -9,10 +9,11 @@ import Header from "./components/Header";
 import MyPage from "./pages/MyPage";
 import "./App.css";
 import CategoryFilter from "./components/CategoryFilter";
+import IntroPage from "./pages/IntroPage";
 
 export default function App() {
   const location = useLocation();
-  const hideHeaderRoutes = ["/login", "/signup", "/mypage"];
+  const hideHeaderRoutes = ["/", "/login", "/signup", "/mypage"];
   const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
 
   const [message, setMessage] = useState("");
@@ -59,6 +60,19 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+  const saved =
+    JSON.parse(localStorage.getItem("user")) ||
+    JSON.parse(sessionStorage.getItem("user"));
+
+  if (saved) {
+    setIsLoggedIn(true);
+    setCurrentUser(saved);
+    setUserId(saved.id);
+  }
+}, []);
+
+
   return (
     <div className="App">
       {!shouldHideHeader && (
@@ -78,18 +92,19 @@ export default function App() {
         )}
 
       <Routes>
-        <Route
-          path="/"
-          element={
-            <HomePage
-              posts={posts}
-              setPosts={setPosts}
-              isLoggedIn={isLoggedIn}
-              currentUser={currentUser}
-              selectedCategory={selectedCategory}
-            />
-          }
-        />
+  <Route path="/" element={<IntroPage />} />
+  <Route
+    path="/home"
+    element={
+      <HomePage
+        posts={posts}
+        setPosts={setPosts}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        selectedCategory={selectedCategory}
+      />
+    }
+  />
 
         <Route
           path="/login"

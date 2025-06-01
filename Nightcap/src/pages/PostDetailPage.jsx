@@ -235,7 +235,7 @@ export default function PostDetailPage({ posts, isLoggedIn, currentUser }) {
           {
             id: "gpt-auto",
             authorAlias: "ChatGPT",
-            profileIcon: "/icons/wizard.png",
+            profileIcon: "/icons/chatgpt.png",
             content: gptReply,
             createdAt: new Date().toISOString(),
             likes: 0,

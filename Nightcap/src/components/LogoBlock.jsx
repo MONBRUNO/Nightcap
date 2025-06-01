@@ -5,7 +5,7 @@ export default function LogoBlock({ resetCategory }) {
 
   const handleClick = () => {
     if (resetCategory) resetCategory(); // ✅ 전체로 초기화
-    navigate("/");
+    navigate("/home");
   };
 
   return (
